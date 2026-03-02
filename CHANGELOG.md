@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.4] - 2026-03-02
+
+### Changed
+- `dlp set` now writes to all known IDE MCP config locations in one shot:
+  - `~/.mcp.json` (Claude Code global — always created)
+  - `.gemini/antigravity/mcp_config.json` (Gemini / antigravity — if dir exists)
+  - `.claude/mcp_config.json` (Claude Code project-level — if dir exists)
+  - `.cursor/mcp_config.json` (Cursor — if dir exists)
+  - `.vscode/mcp_config.json` (VS Code — if dir exists)
+
+  Output now lists every file that was updated.
+
 ## [1.1.3] - 2026-03-02
 
 ### Added

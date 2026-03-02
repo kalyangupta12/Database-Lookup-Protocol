@@ -231,7 +231,7 @@ async function main(): Promise<void> {
     }
 
     case 'set': {
-      // `dlp set` — read DATABASE_URL from local .env and write to global ~/.mcp.json
+      // `dlp set` — read DATABASE_URL from local .env and write to all IDE MCP configs
       const home = process.env['HOME'] ?? process.env['USERPROFILE'] ?? '';
       if (!home) {
         console.error('[DLP] Cannot locate home directory.');
@@ -253,44 +253,58 @@ async function main(): Promise<void> {
         process.exit(1);
       }
 
-      // Load or create ~/.mcp.json
-      const mcpConfigPath = path.join(home, '.mcp.json');
-      let mcpConfig: Record<string, unknown> = {};
-      if (fs.existsSync(mcpConfigPath)) {
-        try {
-          mcpConfig = JSON.parse(fs.readFileSync(mcpConfigPath, 'utf8')) as Record<string, unknown>;
-        } catch {
-          console.error(`[DLP] ${mcpConfigPath} contains invalid JSON — fix it first.`);
-          process.exit(1);
+      // Known MCP config locations:
+      // alwaysWrite=true  → create even if it doesn't exist (global home-dir configs)
+      // alwaysWrite=false → only write if the file or its parent directory already exists
+      const candidates: Array<{ file: string; alwaysWrite: boolean }> = [
+        { file: path.join(home, '.mcp.json'),                                              alwaysWrite: true  }, // Claude Code (global)
+        { file: path.join(process.cwd(), '.gemini', 'antigravity', 'mcp_config.json'),     alwaysWrite: false }, // Gemini / antigravity
+        { file: path.join(process.cwd(), '.claude', 'mcp_config.json'),                    alwaysWrite: false }, // Claude Code (project)
+        { file: path.join(process.cwd(), '.cursor', 'mcp_config.json'),                    alwaysWrite: false }, // Cursor
+        { file: path.join(process.cwd(), '.vscode', 'mcp_config.json'),                    alwaysWrite: false }, // VS Code
+      ];
+
+      // Helper: upsert dlp entry into an MCP config object
+      function upsertDlpConfig(cfg: Record<string, unknown>, url: string): void {
+        if (!cfg['mcpServers']) cfg['mcpServers'] = {};
+        const srv = cfg['mcpServers'] as Record<string, unknown>;
+        if (!srv['dlp']) srv['dlp'] = { command: 'npx', args: ['database-lookup-protocol', 'mcp'] };
+        const dlpEntry = srv['dlp'] as Record<string, unknown>;
+        if (!dlpEntry['env']) dlpEntry['env'] = {};
+        const envBlock = dlpEntry['env'] as Record<string, string>;
+        envBlock['DATABASE_URL'] = url;
+        envBlock['DLP_API_KEY'] = 'not-needed-for-mcp';
+      }
+
+      const written: string[] = [];
+
+      for (const { file, alwaysWrite } of candidates) {
+        const dir = path.dirname(file);
+        const fileExists = fs.existsSync(file);
+        const dirExists = fs.existsSync(dir);
+
+        if (!alwaysWrite && !fileExists && !dirExists) continue;
+
+        let cfg: Record<string, unknown> = {};
+        if (fileExists) {
+          try {
+            cfg = JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, unknown>;
+          } catch {
+            console.warn(`[DLP] Skipping ${file} — invalid JSON`);
+            continue;
+          }
         }
+
+        upsertDlpConfig(cfg, databaseUrl);
+        if (!dirExists) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(file, JSON.stringify(cfg, null, 2));
+        written.push(file);
       }
 
-      // Ensure mcpServers.dlp.env exists
-      if (!mcpConfig['mcpServers']) mcpConfig['mcpServers'] = {};
-      const servers = mcpConfig['mcpServers'] as Record<string, unknown>;
-      if (!servers['dlp']) {
-        servers['dlp'] = { command: 'npx', args: ['database-lookup-protocol', 'mcp'] };
-      }
-      const dlp = servers['dlp'] as Record<string, unknown>;
-      if (!dlp['env']) dlp['env'] = {};
-      const env = dlp['env'] as Record<string, string>;
-
-      const prev = env['DATABASE_URL'];
-      env['DATABASE_URL'] = databaseUrl;
-      env['DLP_API_KEY'] = 'not-needed-for-mcp';
-
-      fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2));
-
-      const short = databaseUrl.length > 50 ? databaseUrl.slice(0, 50) + '...' : databaseUrl;
-      if (prev && prev !== databaseUrl) {
-        console.log(`[DLP] Updated DATABASE_URL in ${mcpConfigPath}`);
-        console.log(`      ${short}`);
-      } else if (!prev) {
-        console.log(`[DLP] DATABASE_URL written to ${mcpConfigPath}`);
-        console.log(`      ${short}`);
-      } else {
-        console.log(`[DLP] DATABASE_URL already up to date in ${mcpConfigPath}`);
-      }
+      const short = databaseUrl.length > 60 ? databaseUrl.slice(0, 60) + '...' : databaseUrl;
+      console.log(`[DLP] DATABASE_URL: ${short}`);
+      console.log('[DLP] Written to:');
+      for (const f of written) console.log(`      ${f}`);
       console.log('[DLP] Restart your IDE to apply the change.');
       break;
     }
