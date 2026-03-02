@@ -1,11 +1,10 @@
 {
   "mcpServers": {
     "dlp": {
-      "command": "node",
-      "args": ["d:/dlp/dist/cli/index.js", "mcp"],
+      "command": "npx",
+      "args": ["database-lookup-protocol", "mcp"],
       "env": {
-        "DATABASE_URL": "YOUR_DATABASE_URL_HERE",
-        "DLP_API_KEY": "YOUR_DLP_API_KEY_HERE"
+        "DATABASE_URL": "YOUR_DATABASE_URL_HERE"
       }
     }
   }

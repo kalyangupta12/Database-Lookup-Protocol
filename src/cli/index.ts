@@ -128,17 +128,22 @@ async function createAdapter(dbType: DBType, config: DLPConfig): Promise<DLPAdap
 }
 
 // ── Config Builder ───────────────────────────────────────────────────────────
-function buildConfig(): DLPConfig {
+// mcpOnly=true  → DLP_API_KEY is not needed (MCP uses stdio, no HTTP exposure)
+// mcpOnly=false → DLP_API_KEY is required to protect the HTTP endpoint
+function buildConfig(mcpOnly: boolean): DLPConfig {
   const apiKey = process.env['DLP_API_KEY'];
-  if (!apiKey) {
-    console.warn('[DLP] WARNING: DLP_API_KEY is not set. Server is unprotected!');
+
+  if (!mcpOnly && !apiKey) {
+    console.warn('[DLP] WARNING: DLP_API_KEY is not set. HTTP server is unprotected!');
+    console.warn('[DLP] Set DLP_API_KEY in your .env file to secure the HTTP endpoint.');
   }
 
   return {
     dbType: detectDBType(),
     port: Number(process.env['PORT'] ?? 3434),
     localhostOnly: process.env['LOCALHOST_ONLY'] !== 'false',
-    apiKey: apiKey ?? 'no-key-set',
+    // In MCP mode the key is never checked — use a placeholder so the type is satisfied
+    apiKey: apiKey ?? (mcpOnly ? 'mcp-mode-no-key-needed' : 'no-key-set'),
     maxRows: Number(process.env['MAX_ROWS'] ?? 20),
     defaultPreviewRows: Number(process.env['DEFAULT_PREVIEW_ROWS'] ?? 5),
     maxTextLength: Number(process.env['MAX_TEXT_LENGTH'] ?? 200),
@@ -152,27 +157,25 @@ async function main(): Promise<void> {
 
   switch (command) {
     case 'start': {
-      console.log('[DLP] Starting Database Lookup Protocol server...');
-      const config = buildConfig();
-      console.log(`[DLP] Detected database type: ${config.dbType}`);
+      const mcpMode = args.includes('--mcp');
+      const httpOnly = args.includes('--http-only');
+      const isMcpOnly = mcpMode && !httpOnly;
+
+      const config = buildConfig(isMcpOnly);
+      process.stderr.write(`[DLP] Starting (db: ${config.dbType}, mode: ${isMcpOnly ? 'mcp' : 'http'})\n`);
 
       const adapter = await createAdapter(config.dbType, config);
       await adapter.connect();
-      console.log('[DLP] Database connection established');
+      process.stderr.write('[DLP] Database connected\n');
 
-      const mcpMode = args.includes('--mcp');
-      const httpOnly = args.includes('--http-only');
-
-      if (mcpMode && !httpOnly) {
-        // Pure MCP mode — run over stdio for IDE integration
+      if (isMcpOnly) {
         await startMCPServer(adapter, config);
       } else {
-        // Default: HTTP server
         await startHttpServer(adapter, config);
       }
 
       const shutdown = async () => {
-        console.log('\n[DLP] Shutting down...');
+        process.stderr.write('\n[DLP] Shutting down...\n');
         await adapter.disconnect();
         process.exit(0);
       };
@@ -182,26 +185,28 @@ async function main(): Promise<void> {
     }
 
     case 'mcp': {
-      // `dlp mcp` — convenience alias for pure MCP mode
-      const config = buildConfig();
+      // `dlp mcp` — pure MCP stdio mode, no API key needed
+      const config = buildConfig(true);
+      process.stderr.write(`[DLP] Starting MCP server (db: ${config.dbType})\n`);
       const adapter = await createAdapter(config.dbType, config);
       await adapter.connect();
+      process.stderr.write('[DLP] Database connected\n');
       await startMCPServer(adapter, config);
       break;
     }
 
     default:
-      console.error(`Unknown command: ${command}`);
-      console.error('Usage:');
-      console.error('  dlp start              Start HTTP server (port 3434)');
-      console.error('  dlp start --mcp        Start MCP stdio server only');
-      console.error('  dlp start --http-only  Start HTTP server only');
-      console.error('  dlp mcp                Alias for start --mcp');
+      process.stderr.write(`Unknown command: ${command}\n`);
+      process.stderr.write('Usage:\n');
+      process.stderr.write('  dlp start              Start HTTP server (port 3434)\n');
+      process.stderr.write('  dlp start --mcp        Start MCP stdio server only\n');
+      process.stderr.write('  dlp start --http-only  Start HTTP server only\n');
+      process.stderr.write('  dlp mcp                Alias for start --mcp\n');
       process.exit(1);
   }
 }
 
 main().catch(err => {
-  console.error('[DLP] Fatal error:', err instanceof Error ? err.message : err);
+  process.stderr.write(`[DLP] Fatal error: ${err instanceof Error ? err.message : String(err)}\n`);
   process.exit(1);
 });
