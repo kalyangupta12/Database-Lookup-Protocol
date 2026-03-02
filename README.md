@@ -3,10 +3,13 @@
 [![npm version](https://img.shields.io/npm/v/database-lookup-protocol.svg)](https://www.npmjs.com/package/database-lookup-protocol)
 [![npm downloads](https://img.shields.io/npm/dm/database-lookup-protocol.svg)](https://www.npmjs.com/package/database-lookup-protocol)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Website](https://img.shields.io/badge/website-dlp--mcp.vercel.app-blue)](https://dlp-mcp.vercel.app)
 
 **DLP lets your AI coding assistant read your database — so it writes better code, faster.**
 
 Ever had your AI assistant guess what your database looks like, only to generate wrong column names or miss relationships? DLP solves that. It gives tools like Claude Code, Cursor, VS Code Copilot, and antigravity (Gemini) **read-only access** to your database schema and data — no debug code needed, no copy-pasting table structures into chat.
+
+> 🌐 **[dlp-mcp.vercel.app](https://dlp-mcp.vercel.app)** — Give Your AI Database Eyes
 
 ---
 
@@ -402,4 +405,4 @@ MIT - see [LICENSE](LICENSE) for details.
 
 ---
 
-**Built by [Kalyan Gupta](https://github.com/kalyangupta12)** | [Report a bug](https://github.com/kalyangupta12/Database-Lookup-Protocol/issues) | [npm package](https://www.npmjs.com/package/database-lookup-protocol)
+**Built by [Kalyan Gupta](https://github.com/kalyangupta12) & [Arghajit Saha](https://github.com/ArghajitSaha)** | [🌐 Website](https://dlp-mcp.vercel.app) | [Report a bug](https://github.com/kalyangupta12/Database-Lookup-Protocol/issues) | [npm package](https://www.npmjs.com/package/database-lookup-protocol)
