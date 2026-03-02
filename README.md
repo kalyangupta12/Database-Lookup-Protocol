@@ -180,32 +180,53 @@ Response:
 
 ## MCP Integration (Claude Code / Cursor)
 
-Add to your project's `.mcp.json`:
+MCP mode uses stdio — the IDE spawns `dlp mcp` automatically. **You never run it manually.**
+No API key is needed in MCP mode (stdio is process-isolated, no HTTP exposure).
+
+### One-time global setup
+
+Place this in your home directory as `~/.mcp.json` (Windows: `C:\Users\<you>\.mcp.json`):
 
 ```json
 {
   "mcpServers": {
     "dlp": {
       "command": "npx",
-      "args": ["database-lookup-protocol", "mcp"],
-      "env": {
-        "DATABASE_URL": "postgresql://...",
-        "DLP_API_KEY": "your-secret"
-      }
+      "args": ["database-lookup-protocol", "mcp"]
     }
   }
 }
 ```
 
-Then in Claude Code, you can say:
+This registers DLP once for **all projects** — no per-project MCP config needed.
+
+### Per-project database config
+
+In each project root, add a `.env` file:
+
+```dotenv
+DATABASE_URL=postgresql://user:pass@host:5432/mydb
+```
+
+`dlp` automatically reads `.env` from the project directory when the IDE spawns it.
+Switch projects — different `.env` — different database. Zero reconfiguration.
+
+### Use in your IDE
+
+Then tell your agent:
 
 > "Use dlp_get_schema to understand the database before writing the migration."
 
 Available MCP tools:
-- `dlp_get_schema` — Get full database schema
+- `dlp_get_schema` — Get full database schema (pass `schema: "public"` to filter)
 - `dlp_preview_table` — Sample rows from any table
 - `dlp_describe_table` — Detailed column metadata
 - `dlp_safe_query` — Run a validated SELECT query
+
+### Why no API key in MCP mode?
+
+`DLP_API_KEY` protects the **HTTP server** (`dlp start`) because it's a network endpoint.
+MCP runs over stdio — only your IDE can talk to it. No network, no auth needed.
 
 ---
 

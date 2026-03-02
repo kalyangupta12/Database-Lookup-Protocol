@@ -2,10 +2,7 @@
   "mcpServers": {
     "dlp": {
       "command": "npx",
-      "args": ["database-lookup-protocol", "mcp"],
-      "env": {
-        "DATABASE_URL": "YOUR_DATABASE_URL_HERE"
-      }
+      "args": ["database-lookup-protocol", "mcp"]
     }
   }
 }
