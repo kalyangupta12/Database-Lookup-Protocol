@@ -48,12 +48,18 @@ Only `DATABASE_URL` is needed. No API key.
 
 `DLP_API_KEY` is pre-set so your IDE doesn't prompt for it — it is only used by the HTTP server, not MCP.
 
-**2. Per-project** — add `.env` in your project root:
-```dotenv
-DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
+**2. Per-project** — run once in each project root:
+```bash
+npx dlp set
 ```
 
-Done. Your IDE will auto-spawn DLP and read the project `.env`.
+`dlp set` reads `DATABASE_URL` from your local `.env` and writes it into `~/.mcp.json` automatically.
+Restart your IDE after running it — done.
+
+> No `.env` yet? Create one first:
+> ```dotenv
+> DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
+> ```
 
 ### HTTP server mode
 
@@ -116,6 +122,7 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
 ## CLI Commands
 
 ```bash
+dlp set                # Write DATABASE_URL from .env to ~/.mcp.json (run per project)
 dlp start              # HTTP server on port 3434 (default)
 dlp start --mcp        # MCP stdio server for IDE integration
 dlp start --http-only  # HTTP server only

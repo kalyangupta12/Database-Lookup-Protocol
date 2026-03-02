@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.3] - 2026-03-02
+
+### Added
+- `dlp set` command — run once per project to write `DATABASE_URL` from your local `.env` into `~/.mcp.json` automatically. No more manual config editing when switching projects.
+  ```
+  cd my-project
+  npx dlp set
+  # → [DLP] DATABASE_URL written to C:\Users\you\.mcp.json
+  # → [DLP] Restart your IDE to apply the change.
+  ```
+
 ## [1.1.2] - 2026-03-02
 
 ### Fixed

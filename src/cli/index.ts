@@ -230,6 +230,71 @@ async function main(): Promise<void> {
       break;
     }
 
+    case 'set': {
+      // `dlp set` — read DATABASE_URL from local .env and write to global ~/.mcp.json
+      const home = process.env['HOME'] ?? process.env['USERPROFILE'] ?? '';
+      if (!home) {
+        console.error('[DLP] Cannot locate home directory.');
+        process.exit(1);
+      }
+
+      // Read DATABASE_URL from .env in cwd
+      let databaseUrl: string | undefined;
+      const localEnv = path.join(process.cwd(), '.env');
+      if (fs.existsSync(localEnv)) {
+        const raw = fs.readFileSync(localEnv, 'utf8');
+        const match = raw.match(/^DATABASE_URL\s*=\s*(.+)$/m);
+        if (match) databaseUrl = match[1].trim().replace(/^['"]|['"]$/g, '');
+      }
+      if (!databaseUrl) databaseUrl = process.env['DATABASE_URL'];
+      if (!databaseUrl) {
+        console.error('[DLP] No DATABASE_URL found. Add it to .env in this directory first:');
+        console.error('  DATABASE_URL=postgresql://user:pass@host:5432/mydb');
+        process.exit(1);
+      }
+
+      // Load or create ~/.mcp.json
+      const mcpConfigPath = path.join(home, '.mcp.json');
+      let mcpConfig: Record<string, unknown> = {};
+      if (fs.existsSync(mcpConfigPath)) {
+        try {
+          mcpConfig = JSON.parse(fs.readFileSync(mcpConfigPath, 'utf8')) as Record<string, unknown>;
+        } catch {
+          console.error(`[DLP] ${mcpConfigPath} contains invalid JSON — fix it first.`);
+          process.exit(1);
+        }
+      }
+
+      // Ensure mcpServers.dlp.env exists
+      if (!mcpConfig['mcpServers']) mcpConfig['mcpServers'] = {};
+      const servers = mcpConfig['mcpServers'] as Record<string, unknown>;
+      if (!servers['dlp']) {
+        servers['dlp'] = { command: 'npx', args: ['database-lookup-protocol', 'mcp'] };
+      }
+      const dlp = servers['dlp'] as Record<string, unknown>;
+      if (!dlp['env']) dlp['env'] = {};
+      const env = dlp['env'] as Record<string, string>;
+
+      const prev = env['DATABASE_URL'];
+      env['DATABASE_URL'] = databaseUrl;
+      env['DLP_API_KEY'] = 'not-needed-for-mcp';
+
+      fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2));
+
+      const short = databaseUrl.length > 50 ? databaseUrl.slice(0, 50) + '...' : databaseUrl;
+      if (prev && prev !== databaseUrl) {
+        console.log(`[DLP] Updated DATABASE_URL in ${mcpConfigPath}`);
+        console.log(`      ${short}`);
+      } else if (!prev) {
+        console.log(`[DLP] DATABASE_URL written to ${mcpConfigPath}`);
+        console.log(`      ${short}`);
+      } else {
+        console.log(`[DLP] DATABASE_URL already up to date in ${mcpConfigPath}`);
+      }
+      console.log('[DLP] Restart your IDE to apply the change.');
+      break;
+    }
+
     default:
       process.stderr.write(`Unknown command: ${command}\n`);
       process.stderr.write('Usage:\n');
@@ -237,6 +302,7 @@ async function main(): Promise<void> {
       process.stderr.write('  dlp start --mcp        Start MCP stdio server only\n');
       process.stderr.write('  dlp start --http-only  Start HTTP server only\n');
       process.stderr.write('  dlp mcp                Alias for start --mcp\n');
+      process.stderr.write('  dlp set                Write DATABASE_URL from .env to ~/.mcp.json\n');
       process.exit(1);
   }
 }
