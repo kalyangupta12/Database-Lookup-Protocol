@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2026-03-02
+
+### Changed
+- README Quick Start split into MCP path and HTTP path — MCP users no longer see `DLP_API_KEY` as a required step
+- `DLP_API_KEY` commented out in `.env.example` with note that it is HTTP-only
+- MCP Integration section simplified — no duplicate setup instructions
+
 ## [1.1.0] - 2026-03-02
 
 ### Added
