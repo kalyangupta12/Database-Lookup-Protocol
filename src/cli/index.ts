@@ -320,8 +320,11 @@ async function main(): Promise<void> {
           try {
             cfg = JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, unknown>;
           } catch {
-            console.warn(`[DLP] Skipping ${file} — invalid JSON`);
-            continue;
+            if (!alwaysWrite) {
+              console.warn(`[DLP] Skipping ${file} — invalid JSON`);
+              continue;
+            }
+            // alwaysWrite: user explicitly targeted this IDE — overwrite the broken file
           }
         }
 
