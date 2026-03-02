@@ -1,0 +1,93 @@
+{
+  "name": "database-lookup-protocol",
+  "version": "1.0.0",
+  "description": "Agent-friendly database introspection protocol for Claude Code, Cursor, Copilot",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "dlp": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "postbuild": "node -e \"const fs=require('fs'); const p='dist/cli/index.js'; if(fs.existsSync(p)){let c=fs.readFileSync(p,'utf8'); if(!c.startsWith('#!/usr/bin/env node')){fs.writeFileSync(p,'#!/usr/bin/env node\\n'+c);}}\"",
+    "dev": "ts-node src/cli/index.ts",
+    "start": "node dist/cli/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "database",
+    "mcp",
+    "llm",
+    "agent",
+    "protocol",
+    "sql",
+    "postgresql",
+    "mysql",
+    "mongodb",
+    "ide"
+  ],
+  "author": "Kalyan Gupta <kalyangupta2002@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kalyangupta12/database-lookup-protocol.git"
+  },
+  "homepage": "https://github.com/kalyangupta12/database-lookup-protocol#readme",
+  "bugs": {
+    "url": "https://github.com/kalyangupta12/database-lookup-protocol/issues"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    ".env.example"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/mssql": "^9.1.9",
+    "@types/node": "^20.14.0",
+    "@types/pg": "^8.11.6",
+    "mongodb": "^7.1.0",
+    "mssql": "^12.2.0",
+    "mysql2": "^3.18.2",
+    "pg": "^8.19.0",
+    "typescript": "^5.5.2"
+  },
+  "peerDependencies": {
+    "@prisma/client": ">=5.0.0",
+    "mongodb": ">=6.0.0",
+    "mssql": ">=10.0.0",
+    "mysql2": ">=3.0.0",
+    "pg": ">=8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    },
+    "mysql2": {
+      "optional": true
+    },
+    "mongodb": {
+      "optional": true
+    },
+    "mssql": {
+      "optional": true
+    },
+    "@prisma/client": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

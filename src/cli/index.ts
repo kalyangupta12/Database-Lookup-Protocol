@@ -1,0 +1,207 @@
+import 'dotenv/config';
+import { DBType, DLPConfig } from '../types/protocol';
+import { DLPAdapter } from '../adapters/base';
+import { startHttpServer } from '../server/index';
+import { startMCPServer } from '../mcp/server';
+
+// ── DB Type Detection ────────────────────────────────────────────────────────
+function detectDBType(): DBType {
+  if (process.env['DB_TYPE']) {
+    const t = process.env['DB_TYPE'].toLowerCase() as DBType;
+    const valid: DBType[] = ['postgres', 'mysql', 'mongodb', 'mssql', 'prisma'];
+    if (valid.includes(t)) return t;
+    throw new Error(
+      `Invalid DB_TYPE: "${process.env['DB_TYPE']}". Valid values: ${valid.join(', ')}`
+    );
+  }
+
+  const url = process.env['DATABASE_URL'] ?? '';
+  if (url.startsWith('postgresql://') || url.startsWith('postgres://')) return 'postgres';
+  if (url.startsWith('mysql://') || url.startsWith('mariadb://')) return 'mysql';
+  if (url.startsWith('mongodb://') || url.startsWith('mongodb+srv://')) return 'mongodb';
+  if (url.startsWith('mssql://') || url.startsWith('sqlserver://')) return 'mssql';
+
+  if (process.env['PG_HOST'] ?? process.env['PGHOST']) return 'postgres';
+  if (process.env['MYSQL_HOST']) return 'mysql';
+  if (process.env['MONGODB_URI']) return 'mongodb';
+  if (process.env['MSSQL_HOST']) return 'mssql';
+
+  throw new Error(
+    'Cannot detect database type. Set DATABASE_URL, DB_TYPE, or a driver-specific env var ' +
+      '(PG_HOST, MYSQL_HOST, MONGODB_URI, MSSQL_HOST).'
+  );
+}
+
+// ── Adapter Factory ──────────────────────────────────────────────────────────
+async function createAdapter(dbType: DBType, config: DLPConfig): Promise<DLPAdapter> {
+  const maxTextLength = config.maxTextLength;
+
+  switch (dbType) {
+    case 'postgres': {
+      const { PostgresAdapter } = await import('../adapters/postgres');
+      const url = process.env['DATABASE_URL'];
+      if (url) {
+        return new PostgresAdapter({ connectionString: url, maxTextLength });
+      }
+      return new PostgresAdapter({
+        host: process.env['PG_HOST'] ?? process.env['PGHOST'] ?? 'localhost',
+        port: Number(process.env['PG_PORT'] ?? process.env['PGPORT'] ?? 5432),
+        database: process.env['PG_DATABASE'] ?? process.env['PGDATABASE'] ?? '',
+        user: process.env['PG_USER'] ?? process.env['PGUSER'] ?? '',
+        password: process.env['PG_PASSWORD'] ?? process.env['PGPASSWORD'] ?? '',
+        ssl:
+          process.env['PG_SSL'] === 'true'
+            ? ({ rejectUnauthorized: false } as Record<string, unknown>)
+            : undefined,
+        maxTextLength,
+      });
+    }
+
+    case 'mysql': {
+      const { MySQLAdapter } = await import('../adapters/mysql');
+      const url = process.env['DATABASE_URL'];
+      if (url) {
+        const u = new URL(url);
+        return new MySQLAdapter({
+          host: u.hostname,
+          port: Number(u.port || 3306),
+          database: u.pathname.slice(1),
+          user: u.username,
+          password: u.password,
+          maxTextLength,
+        });
+      }
+      return new MySQLAdapter({
+        host: process.env['MYSQL_HOST'] ?? 'localhost',
+        port: Number(process.env['MYSQL_PORT'] ?? 3306),
+        database: process.env['MYSQL_DATABASE'] ?? '',
+        user: process.env['MYSQL_USER'] ?? '',
+        password: process.env['MYSQL_PASSWORD'] ?? '',
+        maxTextLength,
+      });
+    }
+
+    case 'mongodb': {
+      const { MongoDBAdapter } = await import('../adapters/mongodb');
+      const uri =
+        process.env['MONGODB_URI'] ??
+        process.env['DATABASE_URL'] ??
+        'mongodb://localhost:27017';
+      const database =
+        process.env['MONGODB_DATABASE'] ??
+        (() => {
+          try {
+            return new URL(uri).pathname.slice(1) || 'test';
+          } catch {
+            return 'test';
+          }
+        })();
+      return new MongoDBAdapter({ uri, database, maxTextLength });
+    }
+
+    case 'mssql': {
+      const { MSSQLAdapter } = await import('../adapters/mssql');
+      return new MSSQLAdapter({
+        server: process.env['MSSQL_HOST'] ?? 'localhost',
+        port: Number(process.env['MSSQL_PORT'] ?? 1433),
+        database: process.env['MSSQL_DATABASE'] ?? '',
+        user: process.env['MSSQL_USER'] ?? '',
+        password: process.env['MSSQL_PASSWORD'] ?? '',
+        encrypt: process.env['MSSQL_ENCRYPT'] !== 'false',
+        trustServerCertificate: process.env['MSSQL_TRUST_CERT'] === 'true',
+        maxTextLength,
+      });
+    }
+
+    case 'prisma': {
+      const { PrismaAdapter } = await import('../adapters/prisma');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+      const { PrismaClient } = require('@prisma/client');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+      const prisma = new PrismaClient();
+      return new PrismaAdapter(prisma, maxTextLength);
+    }
+
+    default:
+      throw new Error(`Unsupported DB type: ${String(dbType)}`);
+  }
+}
+
+// ── Config Builder ───────────────────────────────────────────────────────────
+function buildConfig(): DLPConfig {
+  const apiKey = process.env['DLP_API_KEY'];
+  if (!apiKey) {
+    console.warn('[DLP] WARNING: DLP_API_KEY is not set. Server is unprotected!');
+  }
+
+  return {
+    dbType: detectDBType(),
+    port: Number(process.env['PORT'] ?? 3434),
+    localhostOnly: process.env['LOCALHOST_ONLY'] !== 'false',
+    apiKey: apiKey ?? 'no-key-set',
+    maxRows: Number(process.env['MAX_ROWS'] ?? 20),
+    defaultPreviewRows: Number(process.env['DEFAULT_PREVIEW_ROWS'] ?? 5),
+    maxTextLength: Number(process.env['MAX_TEXT_LENGTH'] ?? 200),
+  };
+}
+
+// ── Entrypoint ───────────────────────────────────────────────────────────────
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  const command = args[0] ?? 'start';
+
+  switch (command) {
+    case 'start': {
+      console.log('[DLP] Starting Database Lookup Protocol server...');
+      const config = buildConfig();
+      console.log(`[DLP] Detected database type: ${config.dbType}`);
+
+      const adapter = await createAdapter(config.dbType, config);
+      await adapter.connect();
+      console.log('[DLP] Database connection established');
+
+      const mcpMode = args.includes('--mcp');
+      const httpOnly = args.includes('--http-only');
+
+      if (mcpMode && !httpOnly) {
+        // Pure MCP mode — run over stdio for IDE integration
+        await startMCPServer(adapter, config);
+      } else {
+        // Default: HTTP server
+        await startHttpServer(adapter, config);
+      }
+
+      const shutdown = async () => {
+        console.log('\n[DLP] Shutting down...');
+        await adapter.disconnect();
+        process.exit(0);
+      };
+      process.on('SIGINT', shutdown);
+      process.on('SIGTERM', shutdown);
+      break;
+    }
+
+    case 'mcp': {
+      // `dlp mcp` — convenience alias for pure MCP mode
+      const config = buildConfig();
+      const adapter = await createAdapter(config.dbType, config);
+      await adapter.connect();
+      await startMCPServer(adapter, config);
+      break;
+    }
+
+    default:
+      console.error(`Unknown command: ${command}`);
+      console.error('Usage:');
+      console.error('  dlp start              Start HTTP server (port 3434)');
+      console.error('  dlp start --mcp        Start MCP stdio server only');
+      console.error('  dlp start --http-only  Start HTTP server only');
+      console.error('  dlp mcp                Alias for start --mcp');
+      process.exit(1);
+  }
+}
+
+main().catch(err => {
+  console.error('[DLP] Fatal error:', err instanceof Error ? err.message : err);
+  process.exit(1);
+});

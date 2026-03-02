@@ -1,0 +1,32 @@
+# Planning docs (not for public repo)
+plan.md
+
+# Claude Code temp files
+tmpclaude-*
+
+# Dependencies
+node_modules/
+
+# Build output — rebuilt via `npm run build`
+dist/
+
+# Environment — never commit real credentials
+.env
+.env.local
+.env.*.local
+
+# Local MCP config with real credentials (use .mcp.json as the safe template)
+.mcp.local.json
+
+# npm pack artifact
+*.tgz
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
