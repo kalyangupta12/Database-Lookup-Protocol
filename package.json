@@ -30,11 +30,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kalyangupta12/database-lookup-protocol.git"
+    "url": "https://github.com/kalyangupta12/Database-Lookup-Protocol.git"
   },
-  "homepage": "https://github.com/kalyangupta12/database-lookup-protocol#readme",
+  "homepage": "https://github.com/kalyangupta12/Database-Lookup-Protocol#readme",
   "bugs": {
-    "url": "https://github.com/kalyangupta12/database-lookup-protocol/issues"
+    "url": "https://github.com/kalyangupta12/Database-Lookup-Protocol/issues"
   },
   "files": [
     "dist",
