@@ -49,15 +49,45 @@ Setting up DLP takes **two steps** and under a minute.
 - A database you want to connect to (PostgreSQL, MySQL, MongoDB, SQL Server, or Prisma)
 - An IDE that supports MCP (Claude Code, Cursor, VS Code, or antigravity)
 
-### Step 1: Add your database connection string
+### Step 1: Add your database connection to `.env`
 
-Make sure your project has a `.env` file with your `DATABASE_URL`. If you already have one (most projects do), you're good — skip to Step 2.
+Make sure your project has a `.env` file with your database connection. If you already have one (most projects do), you're good — skip to Step 2.
 
-If you don't have one yet, create a `.env` file in your project root:
+**Option A: Single connection string** (most common)
 
 ```dotenv
 DATABASE_URL=postgresql://user:password@localhost:5432/mydb
 ```
+
+**Option B: Individual variables** (if your project uses separate host/user/password vars)
+
+```dotenv
+# PostgreSQL
+PG_HOST=localhost
+PG_PORT=5432
+PG_DATABASE=mydb
+PG_USER=admin
+PG_PASSWORD=secret
+
+# MySQL
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=mydb
+MYSQL_USER=admin
+MYSQL_PASSWORD=secret
+
+# MongoDB
+MONGODB_URI=mongodb://localhost:27017/mydb
+
+# SQL Server
+MSSQL_HOST=localhost
+MSSQL_PORT=1433
+MSSQL_DATABASE=mydb
+MSSQL_USER=admin
+MSSQL_PASSWORD=secret
+```
+
+DLP automatically detects whichever format you use — `DATABASE_URL` or individual variables.
 
 > **Not sure what your DATABASE_URL looks like?** See the [Connection String Formats](#connection-string-formats) section below for examples for each database.
 
@@ -84,7 +114,7 @@ npx dlp set all
 
 **That's it!** Restart your IDE and DLP is ready to use.
 
-> **What just happened?** The `dlp set` command read `DATABASE_URL` from your project's `.env` file and wrote the MCP configuration to your IDE's global config directory. Your AI assistant will now see DLP as an available tool.
+> **What just happened?** The `dlp set` command read your database connection variables from your project's `.env` file (either `DATABASE_URL` or individual vars like `PG_HOST`, `MYSQL_HOST`, etc.) and wrote the MCP configuration to your IDE's global config directory. Your AI assistant will now see DLP as an available tool.
 
 ---
 
@@ -179,7 +209,7 @@ When you run `npx dlp set <ide>`, it writes the MCP configuration to your IDE's 
 | VS Code | `~/.vscode/mcp_config.json` |
 | Claude Code | `~/.mcp.json` |
 
-**Switching projects?** Just `cd` into the new project, and run `npx dlp set <ide>` again. It will update the config with the new project's `DATABASE_URL`.
+**Switching projects?** Just `cd` into the new project, and run `npx dlp set <ide>` again. It will update the config with the new project's database connection.
 
 ---
 
@@ -199,7 +229,7 @@ DLP is designed to be safe by default:
 
 When you switch to a different project with a different database:
 
-1. Make sure the new project has a `.env` file with its `DATABASE_URL`
+1. Make sure the new project has a `.env` file with its database connection (`DATABASE_URL` or individual vars)
 2. Open a terminal in that project folder
 3. Run `npx dlp set <ide>` again
 4. Restart your IDE
@@ -260,7 +290,7 @@ curl -X POST http://localhost:3434/protocol \
 ## CLI Reference
 
 ```
-npx dlp set <ide>         Read DATABASE_URL from .env and configure your IDE
+npx dlp set <ide>         Read DB vars from .env and configure your IDE
 npx dlp set all           Configure all supported IDEs at once
 npx dlp start             Start HTTP API server on port 3434
 npx dlp start --mcp       Start MCP stdio server

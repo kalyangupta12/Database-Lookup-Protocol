@@ -246,18 +246,51 @@ async function main(): Promise<void> {
         process.exit(1);
       }
 
-      // Read DATABASE_URL from .env in cwd
-      let databaseUrl: string | undefined;
+      // ── Read DB env vars from .env in cwd ──────────────────────────────────
+      // All DB-related keys we look for in .env
+      const dbEnvKeys = [
+        'DATABASE_URL', 'DB_TYPE',
+        // PostgreSQL
+        'PG_HOST', 'PGHOST', 'PG_PORT', 'PGPORT', 'PG_DATABASE', 'PGDATABASE',
+        'PG_USER', 'PGUSER', 'PG_PASSWORD', 'PGPASSWORD', 'PG_SSL',
+        // MySQL
+        'MYSQL_HOST', 'MYSQL_PORT', 'MYSQL_DATABASE', 'MYSQL_USER', 'MYSQL_PASSWORD',
+        // MongoDB
+        'MONGODB_URI', 'MONGODB_DATABASE',
+        // MSSQL
+        'MSSQL_HOST', 'MSSQL_PORT', 'MSSQL_DATABASE', 'MSSQL_USER', 'MSSQL_PASSWORD',
+        'MSSQL_ENCRYPT', 'MSSQL_TRUST_CERT',
+      ];
+
+      const dbEnvVars: Record<string, string> = {};
       const localEnv = path.join(process.cwd(), '.env');
       if (fs.existsSync(localEnv)) {
         const raw = fs.readFileSync(localEnv, 'utf8');
-        const match = raw.match(/^DATABASE_URL\s*=\s*(.+)$/m);
-        if (match) databaseUrl = match[1].trim().replace(/^['"]|['"]$/g, '');
+        for (const key of dbEnvKeys) {
+          const re = new RegExp(`^${key}\\s*=\\s*(.+)$`, 'm');
+          const match = raw.match(re);
+          if (match) dbEnvVars[key] = match[1].trim().replace(/^['"]|['"]$/g, '');
+        }
       }
-      if (!databaseUrl) databaseUrl = process.env['DATABASE_URL'];
-      if (!databaseUrl) {
-        console.error('[DLP] No DATABASE_URL found. Add it to .env in this directory first:');
+
+      // Fallback to process.env for any keys not found in .env file
+      for (const key of dbEnvKeys) {
+        if (!dbEnvVars[key] && process.env[key]) {
+          dbEnvVars[key] = process.env[key]!;
+        }
+      }
+
+      // Must have at least DATABASE_URL or a driver-specific host var
+      const hasConnection = dbEnvVars['DATABASE_URL'] ||
+        dbEnvVars['PG_HOST'] || dbEnvVars['PGHOST'] ||
+        dbEnvVars['MYSQL_HOST'] ||
+        dbEnvVars['MONGODB_URI'] ||
+        dbEnvVars['MSSQL_HOST'];
+
+      if (!hasConnection) {
+        console.error('[DLP] No database connection found in .env. Add one of:');
         console.error('  DATABASE_URL=postgresql://user:pass@host:5432/mydb');
+        console.error('  — or individual vars like PG_HOST, MYSQL_HOST, MONGODB_URI, MSSQL_HOST');
         process.exit(1);
       }
 
@@ -295,14 +328,17 @@ async function main(): Promise<void> {
       }
 
       // Helper: upsert dlp entry into an MCP config object
-      function upsertDlpConfig(cfg: Record<string, unknown>, url: string): void {
+      function upsertDlpConfig(cfg: Record<string, unknown>, vars: Record<string, string>): void {
         if (!cfg['mcpServers']) cfg['mcpServers'] = {};
         const srv = cfg['mcpServers'] as Record<string, unknown>;
         if (!srv['dlp']) srv['dlp'] = { command: 'npx', args: ['database-lookup-protocol', 'mcp'] };
         const dlpEntry = srv['dlp'] as Record<string, unknown>;
         if (!dlpEntry['env']) dlpEntry['env'] = {};
         const envBlock = dlpEntry['env'] as Record<string, string>;
-        envBlock['DATABASE_URL'] = url;
+        // Write all detected DB env vars
+        for (const [key, val] of Object.entries(vars)) {
+          envBlock[key] = val;
+        }
         envBlock['DLP_API_KEY'] = 'not-needed-for-mcp';
       }
 
@@ -328,14 +364,22 @@ async function main(): Promise<void> {
           }
         }
 
-        upsertDlpConfig(cfg, databaseUrl);
+        upsertDlpConfig(cfg, dbEnvVars);
         if (!dirExists) fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(file, JSON.stringify(cfg, null, 2));
         written.push(file);
       }
 
-      const short = databaseUrl.length > 60 ? databaseUrl.slice(0, 60) + '...' : databaseUrl;
-      console.log(`[DLP] DATABASE_URL: ${short}`);
+      // Summary
+      const varNames = Object.keys(dbEnvVars);
+      if (dbEnvVars['DATABASE_URL']) {
+        const short = dbEnvVars['DATABASE_URL'].length > 60
+          ? dbEnvVars['DATABASE_URL'].slice(0, 60) + '...'
+          : dbEnvVars['DATABASE_URL'];
+        console.log(`[DLP] DATABASE_URL: ${short}`);
+      } else {
+        console.log(`[DLP] Env vars: ${varNames.join(', ')}`);
+      }
       console.log('[DLP] Written to:');
       for (const f of written) console.log(`      ${f}`);
       console.log('[DLP] Restart your IDE to apply the change.');
