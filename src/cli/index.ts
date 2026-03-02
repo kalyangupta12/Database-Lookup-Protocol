@@ -1,8 +1,43 @@
-import 'dotenv/config';
+import * as fs from 'fs';
+import * as path from 'path';
+import { config as dotenvConfig } from 'dotenv';
 import { DBType, DLPConfig } from '../types/protocol';
 import { DLPAdapter } from '../adapters/base';
 import { startHttpServer } from '../server/index';
 import { startMCPServer } from '../mcp/server';
+
+// ── .env Discovery ────────────────────────────────────────────────────────────
+// Walk up from cwd looking for the nearest .env, then fall back to ~/.env.
+// This lets a project .env be found regardless of what cwd the IDE uses when
+// spawning the MCP server (some IDEs use the IDE install dir, not the project).
+function loadEnv(): void {
+  const tried = new Set<string>();
+
+  // Walk up from cwd
+  let dir = process.cwd();
+  while (true) {
+    const candidate = path.join(dir, '.env');
+    if (!tried.has(candidate) && fs.existsSync(candidate)) {
+      dotenvConfig({ path: candidate });
+      return;
+    }
+    tried.add(candidate);
+    const parent = path.dirname(dir);
+    if (parent === dir) break; // reached filesystem root
+    dir = parent;
+  }
+
+  // Fallback: home directory ~/.env
+  const home = process.env['HOME'] ?? process.env['USERPROFILE'] ?? '';
+  if (home) {
+    const homeEnv = path.join(home, '.env');
+    if (!tried.has(homeEnv) && fs.existsSync(homeEnv)) {
+      dotenvConfig({ path: homeEnv });
+    }
+  }
+}
+
+loadEnv();
 
 // ── DB Type Detection ────────────────────────────────────────────────────────
 function detectDBType(): DBType {
