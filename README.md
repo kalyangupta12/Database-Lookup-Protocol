@@ -37,11 +37,16 @@ Only `DATABASE_URL` is needed. No API key.
   "mcpServers": {
     "dlp": {
       "command": "npx",
-      "args": ["database-lookup-protocol", "mcp"]
+      "args": ["database-lookup-protocol", "mcp"],
+      "env": {
+        "DLP_API_KEY": "not-needed-for-mcp"
+      }
     }
   }
 }
 ```
+
+`DLP_API_KEY` is pre-set so your IDE doesn't prompt for it — it is only used by the HTTP server, not MCP.
 
 **2. Per-project** — add `.env` in your project root:
 ```dotenv

@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file.
 - `.env` is now discovered by walking up from cwd to the filesystem root, then falling back to `~/.env`.
   Previously DLP only checked the exact cwd, so MCP mode failed when the IDE spawned the server
   from a directory other than the project root. Now it reliably finds `DATABASE_URL` in any parent directory.
+- `DLP_API_KEY` is pre-set to `"not-needed-for-mcp"` in the `.mcp.json` template and README config.
+  IDE setup wizards scan the package source for `process.env` references and prompt for every var they find.
+  Pre-setting this value suppresses the prompt — `DLP_API_KEY` is only enforced by the HTTP server, never MCP.
 
 ## [1.1.1] - 2026-03-02
 

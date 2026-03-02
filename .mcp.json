@@ -2,7 +2,10 @@
   "mcpServers": {
     "dlp": {
       "command": "npx",
-      "args": ["database-lookup-protocol", "mcp"]
+      "args": ["database-lookup-protocol", "mcp"],
+      "env": {
+        "DLP_API_KEY": "not-needed-for-mcp"
+      }
     }
   }
 }
