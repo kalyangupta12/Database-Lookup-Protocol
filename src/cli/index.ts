@@ -231,7 +231,15 @@ async function main(): Promise<void> {
     }
 
     case 'set': {
-      // `dlp set` — read DATABASE_URL from local .env and write to all IDE MCP configs
+      // `dlp set [ide]` — read DATABASE_URL from local .env and write to IDE MCP configs
+      //   dlp set             → ~/.mcp.json + any project configs that already exist
+      //   dlp set antigravity → .gemini/antigravity/mcp_config.json  (creates dir)
+      //   dlp set cursor      → .cursor/mcp_config.json              (creates dir)
+      //   dlp set vscode      → .vscode/mcp_config.json              (creates dir)
+      //   dlp set claude      → .claude/mcp_config.json              (creates dir)
+      //   dlp set all         → all of the above                     (creates dirs)
+      const ideArg = (args[1] ?? '').toLowerCase();
+
       const home = process.env['HOME'] ?? process.env['USERPROFILE'] ?? '';
       if (!home) {
         console.error('[DLP] Cannot locate home directory.');
@@ -253,16 +261,38 @@ async function main(): Promise<void> {
         process.exit(1);
       }
 
-      // Known MCP config locations:
-      // alwaysWrite=true  → create even if it doesn't exist (global home-dir configs)
-      // alwaysWrite=false → only write if the file or its parent directory already exists
-      const candidates: Array<{ file: string; alwaysWrite: boolean }> = [
-        { file: path.join(home, '.mcp.json'),                                              alwaysWrite: true  }, // Claude Code (global)
-        { file: path.join(process.cwd(), '.gemini', 'antigravity', 'mcp_config.json'),     alwaysWrite: false }, // Gemini / antigravity
-        { file: path.join(process.cwd(), '.claude', 'mcp_config.json'),                    alwaysWrite: false }, // Claude Code (project)
-        { file: path.join(process.cwd(), '.cursor', 'mcp_config.json'),                    alwaysWrite: false }, // Cursor
-        { file: path.join(process.cwd(), '.vscode', 'mcp_config.json'),                    alwaysWrite: false }, // VS Code
-      ];
+      // All known IDE targets
+      const ideTargets: Record<string, string> = {
+        antigravity: path.join(process.cwd(), '.gemini', 'antigravity', 'mcp_config.json'),
+        cursor:      path.join(process.cwd(), '.cursor',  'mcp_config.json'),
+        vscode:      path.join(process.cwd(), '.vscode',  'mcp_config.json'),
+        claude:      path.join(process.cwd(), '.claude',  'mcp_config.json'),
+      };
+
+      // Build list of files to write
+      const targets: Array<{ file: string; alwaysWrite: boolean }> = [];
+
+      if (ideArg === '' ) {
+        // No IDE specified — write to global config always, project configs only if dir exists
+        targets.push({ file: path.join(home, '.mcp.json'), alwaysWrite: true });
+        for (const file of Object.values(ideTargets)) {
+          targets.push({ file, alwaysWrite: false });
+        }
+      } else if (ideArg === 'all') {
+        // Write to everything, creating dirs as needed
+        targets.push({ file: path.join(home, '.mcp.json'), alwaysWrite: true });
+        for (const file of Object.values(ideTargets)) {
+          targets.push({ file, alwaysWrite: true });
+        }
+      } else if (ideTargets[ideArg]) {
+        // Specific IDE — always create
+        targets.push({ file: path.join(home, '.mcp.json'), alwaysWrite: true });
+        targets.push({ file: ideTargets[ideArg], alwaysWrite: true });
+      } else {
+        console.error(`[DLP] Unknown IDE: "${ideArg}"`);
+        console.error('  Valid targets: antigravity, cursor, vscode, claude, all');
+        process.exit(1);
+      }
 
       // Helper: upsert dlp entry into an MCP config object
       function upsertDlpConfig(cfg: Record<string, unknown>, url: string): void {
@@ -278,7 +308,7 @@ async function main(): Promise<void> {
 
       const written: string[] = [];
 
-      for (const { file, alwaysWrite } of candidates) {
+      for (const { file, alwaysWrite } of targets) {
         const dir = path.dirname(file);
         const fileExists = fs.existsSync(file);
         const dirExists = fs.existsSync(dir);
@@ -316,7 +346,12 @@ async function main(): Promise<void> {
       process.stderr.write('  dlp start --mcp        Start MCP stdio server only\n');
       process.stderr.write('  dlp start --http-only  Start HTTP server only\n');
       process.stderr.write('  dlp mcp                Alias for start --mcp\n');
-      process.stderr.write('  dlp set                Write DATABASE_URL from .env to ~/.mcp.json\n');
+      process.stderr.write('  dlp set                Write DATABASE_URL from .env to all found IDE configs\n');
+      process.stderr.write('  dlp set antigravity    Write to .gemini/antigravity/mcp_config.json (creates dir)\n');
+      process.stderr.write('  dlp set cursor         Write to .cursor/mcp_config.json (creates dir)\n');
+      process.stderr.write('  dlp set vscode         Write to .vscode/mcp_config.json (creates dir)\n');
+      process.stderr.write('  dlp set claude         Write to .claude/mcp_config.json (creates dir)\n');
+      process.stderr.write('  dlp set all            Write to all IDE configs (creates all dirs)\n');
       process.exit(1);
   }
 }

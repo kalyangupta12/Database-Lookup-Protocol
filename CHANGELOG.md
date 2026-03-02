@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.5] - 2026-03-02
+
+### Changed
+- `dlp set` now accepts an optional IDE name argument, always creating the config dir:
+  ```
+  npx dlp set antigravity   # creates .gemini/antigravity/mcp_config.json
+  npx dlp set cursor        # creates .cursor/mcp_config.json
+  npx dlp set vscode        # creates .vscode/mcp_config.json
+  npx dlp set claude        # creates .claude/mcp_config.json
+  npx dlp set all           # creates all of the above
+  npx dlp set               # updates ~/.mcp.json + any project configs that already exist
+  ```
+
 ## [1.1.4] - 2026-03-02
 
 ### Changed
