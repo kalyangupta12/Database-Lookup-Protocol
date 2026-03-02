@@ -7,6 +7,9 @@ tmpclaude-*
 # Dependencies
 node_modules/
 
+# publish github pages build output
+publish-github.js
+
 # Build output — rebuilt via `npm run build`
 dist/
 
