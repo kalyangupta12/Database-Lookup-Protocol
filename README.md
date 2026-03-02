@@ -39,6 +39,20 @@ Your AI Assistant  <-->  DLP (MCP Server)  <-->  Your Database
 
 ---
 
+## Installation
+
+```bash
+npm install database-lookup-protocol
+```
+
+Or use it directly without installing (via `npx`):
+
+```bash
+npx database-lookup-protocol set cursor
+```
+
+---
+
 ## Quick Start
 
 Setting up DLP takes **two steps** and under a minute.
@@ -342,6 +356,43 @@ To add support for a new database:
 2. The adapter needs four methods: `getSchema()`, `previewTable()`, `describeTable()`, and `safeQuery()`
 3. Register the adapter in `src/cli/index.ts`
 4. Add the connection string format to this README
+
+---
+
+## Supported Environment Variables
+
+`dlp set` automatically reads **all** database-related variables from your project's `.env` — not just `DATABASE_URL`. Here's the full list of variables it detects and writes into your IDE config:
+
+| Variable | Database | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Any | Full connection string (auto-detects DB type from scheme) |
+| `DB_TYPE` | Any | Explicitly set DB type: `postgres`, `mysql`, `mongodb`, `mssql`, `prisma` |
+| **PostgreSQL** | | |
+| `PG_HOST` / `PGHOST` | PostgreSQL | Database host |
+| `PG_PORT` / `PGPORT` | PostgreSQL | Database port (default: 5432) |
+| `PG_DATABASE` / `PGDATABASE` | PostgreSQL | Database name |
+| `PG_USER` / `PGUSER` | PostgreSQL | Username |
+| `PG_PASSWORD` / `PGPASSWORD` | PostgreSQL | Password |
+| `PG_SSL` | PostgreSQL | Set to `true` to enable SSL |
+| **MySQL / MariaDB** | | |
+| `MYSQL_HOST` | MySQL | Database host |
+| `MYSQL_PORT` | MySQL | Database port (default: 3306) |
+| `MYSQL_DATABASE` | MySQL | Database name |
+| `MYSQL_USER` | MySQL | Username |
+| `MYSQL_PASSWORD` | MySQL | Password |
+| **MongoDB** | | |
+| `MONGODB_URI` | MongoDB | Full MongoDB connection URI |
+| `MONGODB_DATABASE` | MongoDB | Database name (default: parsed from URI or `test`) |
+| **SQL Server** | | |
+| `MSSQL_HOST` | MSSQL | Database host |
+| `MSSQL_PORT` | MSSQL | Database port (default: 1433) |
+| `MSSQL_DATABASE` | MSSQL | Database name |
+| `MSSQL_USER` | MSSQL | Username |
+| `MSSQL_PASSWORD` | MSSQL | Password |
+| `MSSQL_ENCRYPT` | MSSQL | Set to `false` to disable encryption |
+| `MSSQL_TRUST_CERT` | MSSQL | Set to `true` to trust self-signed certificates |
+
+**How it works:** When you run `npx dlp set <ide>`, it scans your `.env` for all of the above variables, and writes every one it finds into the IDE's MCP config `env` block. That way, when the IDE spawns the DLP MCP server, all your database credentials are available — regardless of whether you use a single `DATABASE_URL` or separate variables.
 
 ---
 
