@@ -261,12 +261,12 @@ async function main(): Promise<void> {
         process.exit(1);
       }
 
-      // All known IDE targets
+      // All known IDE targets — all in home dir (global config, not project-local)
       const ideTargets: Record<string, string> = {
-        antigravity: path.join(process.cwd(), '.gemini', 'antigravity', 'mcp_config.json'),
-        cursor:      path.join(process.cwd(), '.cursor',  'mcp_config.json'),
-        vscode:      path.join(process.cwd(), '.vscode',  'mcp_config.json'),
-        claude:      path.join(process.cwd(), '.claude',  'mcp_config.json'),
+        antigravity: path.join(home, '.gemini', 'antigravity', 'mcp_config.json'),
+        cursor:      path.join(home, '.cursor',  'mcp_config.json'),
+        vscode:      path.join(home, '.vscode',  'mcp_config.json'),
+        claude:      path.join(home, '.claude',  'mcp_config.json'),
       };
 
       // Build list of files to write
@@ -347,11 +347,11 @@ async function main(): Promise<void> {
       process.stderr.write('  dlp start --http-only  Start HTTP server only\n');
       process.stderr.write('  dlp mcp                Alias for start --mcp\n');
       process.stderr.write('  dlp set                Write DATABASE_URL from .env to all found IDE configs\n');
-      process.stderr.write('  dlp set antigravity    Write to .gemini/antigravity/mcp_config.json (creates dir)\n');
-      process.stderr.write('  dlp set cursor         Write to .cursor/mcp_config.json (creates dir)\n');
-      process.stderr.write('  dlp set vscode         Write to .vscode/mcp_config.json (creates dir)\n');
-      process.stderr.write('  dlp set claude         Write to .claude/mcp_config.json (creates dir)\n');
-      process.stderr.write('  dlp set all            Write to all IDE configs (creates all dirs)\n');
+      process.stderr.write('  dlp set antigravity    Write to ~/.gemini/antigravity/mcp_config.json\n');
+      process.stderr.write('  dlp set cursor         Write to ~/.cursor/mcp_config.json\n');
+      process.stderr.write('  dlp set vscode         Write to ~/.vscode/mcp_config.json\n');
+      process.stderr.write('  dlp set claude         Write to ~/.claude/mcp_config.json\n');
+      process.stderr.write('  dlp set all            Write to all IDE configs in home dir\n');
       process.exit(1);
   }
 }

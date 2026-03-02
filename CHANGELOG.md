@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.6] - 2026-03-02
+
+### Fixed
+- `dlp set <ide>` now writes to `~/<ide-config>` (home dir) instead of `./<ide-config>` (project dir).
+  All IDE configs are global and belong in the home directory, not the project root.
+  Correct paths:
+  - `~/.gemini/antigravity/mcp_config.json`
+  - `~/.cursor/mcp_config.json`
+  - `~/.vscode/mcp_config.json`
+  - `~/.claude/mcp_config.json`
+
 ## [1.1.5] - 2026-03-02
 
 ### Changed
