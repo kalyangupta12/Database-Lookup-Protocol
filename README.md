@@ -25,15 +25,38 @@ IDE Agent (Claude Code / Cursor / Copilot)
 
 ---
 
-## Quick Start (30 seconds)
+## Quick Start
+
+### MCP mode (Claude Code / Cursor / Copilot)
+
+Only `DATABASE_URL` is needed. No API key.
+
+**1. Global config** — create `~/.mcp.json` (once, all projects):
+```json
+{
+  "mcpServers": {
+    "dlp": {
+      "command": "npx",
+      "args": ["database-lookup-protocol", "mcp"]
+    }
+  }
+}
+```
+
+**2. Per-project** — add `.env` in your project root:
+```dotenv
+DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
+```
+
+Done. Your IDE will auto-spawn DLP and read the project `.env`.
+
+### HTTP server mode
 
 ```bash
-npm install -g database-lookup-protocol
+# In your project, create .env:
+DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
+DLP_API_KEY=your-secret-key   # required for HTTP mode only
 
-# Copy and fill in your database credentials
-cp .env.example .env
-
-# Start the server
 npx dlp start
 ```
 
@@ -56,26 +79,22 @@ npm install @prisma/client  # Prisma
 
 ## Configuration
 
-Copy `.env.example` to `.env` and fill in your credentials:
+Create a `.env` file in your project root:
 
 ```dotenv
-# Auto-detect from URL:
+# Required — auto-detection from URL prefix:
 DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
 
-# Or set explicitly:
-DB_TYPE=postgres
+# Or set DB type explicitly (postgres | mysql | mongodb | mssql | prisma):
+# DB_TYPE=postgres
 
-# Security
-DLP_API_KEY=your-secret-key
+# HTTP server only — not needed in MCP mode:
+# DLP_API_KEY=your-secret-key
 
-# Server
-PORT=3434
-LOCALHOST_ONLY=true
-
-# Limits
-MAX_ROWS=20
-DEFAULT_PREVIEW_ROWS=5
-MAX_TEXT_LENGTH=200
+# Optional limits:
+# MAX_ROWS=20
+# DEFAULT_PREVIEW_ROWS=5
+# MAX_TEXT_LENGTH=200
 ```
 
 ### Supported DATABASE_URL formats
@@ -180,53 +199,18 @@ Response:
 
 ## MCP Integration (Claude Code / Cursor)
 
-MCP mode uses stdio — the IDE spawns `dlp mcp` automatically. **You never run it manually.**
-No API key is needed in MCP mode (stdio is process-isolated, no HTTP exposure).
+See [Quick Start → MCP mode](#mcp-mode-claude-code--cursor--copilot) above for setup.
 
-### One-time global setup
-
-Place this in your home directory as `~/.mcp.json` (Windows: `C:\Users\<you>\.mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "dlp": {
-      "command": "npx",
-      "args": ["database-lookup-protocol", "mcp"]
-    }
-  }
-}
-```
-
-This registers DLP once for **all projects** — no per-project MCP config needed.
-
-### Per-project database config
-
-In each project root, add a `.env` file:
-
-```dotenv
-DATABASE_URL=postgresql://user:pass@host:5432/mydb
-```
-
-`dlp` automatically reads `.env` from the project directory when the IDE spawns it.
-Switch projects — different `.env` — different database. Zero reconfiguration.
-
-### Use in your IDE
-
-Then tell your agent:
-
-> "Use dlp_get_schema to understand the database before writing the migration."
+The IDE spawns `dlp mcp` automatically — you never run it manually.
+Only `DATABASE_URL` is needed. No API key.
 
 Available MCP tools:
-- `dlp_get_schema` — Get full database schema (pass `schema: "public"` to filter)
+- `dlp_get_schema` — Get full database schema (pass `schema: "public"` to filter out system schemas)
 - `dlp_preview_table` — Sample rows from any table
 - `dlp_describe_table` — Detailed column metadata
 - `dlp_safe_query` — Run a validated SELECT query
 
-### Why no API key in MCP mode?
-
-`DLP_API_KEY` protects the **HTTP server** (`dlp start`) because it's a network endpoint.
-MCP runs over stdio — only your IDE can talk to it. No network, no auth needed.
+**Why no API key in MCP mode?** `DLP_API_KEY` protects the HTTP server because it's a network endpoint. MCP runs over stdio — only your IDE process can talk to it.
 
 ---
 
