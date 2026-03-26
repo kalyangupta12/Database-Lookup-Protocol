@@ -240,6 +240,22 @@ DLP is designed to be safe by default:
 - **Row limits enforced** — All queries are capped at 20 rows. Long text fields are automatically truncated to 200 characters.
 - **No API key needed** — MCP uses stdio (standard input/output), so there's no HTTP server or API key to worry about.
 
+### About the `postbuild` script
+
+DLP includes a `postbuild` npm script that adds a shebang line (`#!/usr/bin/env node`) to the CLI entry point file. This is a standard practice for Node.js command-line tools to work correctly on Unix-like systems (Linux, macOS).
+
+**What it does:**
+```javascript
+// Checks if dist/cli/index.js exists
+// Reads the compiled CLI file
+// Adds #!/usr/bin/env node at the top if it's not already there
+// Writes it back to disk
+```
+
+This script runs automatically after TypeScript compilation (`npm run build`) and is necessary for the `dlp` command to be executable. The script only reads and writes to the project's own build output — it doesn't access external files, network resources, or perform any malicious operations.
+
+**Why it's needed:** TypeScript doesn't preserve shebang lines during compilation, so we add it back afterwards. Without this line, the `dlp` command wouldn't work when installed globally or used via `npx`.
+
 ---
 
 ## Switching projects
