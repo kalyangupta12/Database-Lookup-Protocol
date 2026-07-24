@@ -9,6 +9,8 @@ export { MongoDBAdapter } from './adapters/mongodb';
 export type { MongoDBConfig } from './adapters/mongodb';
 export { MSSQLAdapter } from './adapters/mssql';
 export type { MSSQLConfig } from './adapters/mssql';
+export { SQLiteAdapter } from './adapters/sqlite';
+export type { SQLiteConfig } from './adapters/sqlite';
 export { PrismaAdapter } from './adapters/prisma';
 
 export type {

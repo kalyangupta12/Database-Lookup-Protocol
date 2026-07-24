@@ -169,6 +169,7 @@ DLP works with five popular databases. You only need to install the driver for t
 | **MySQL / MariaDB** | `npm install mysql2` | Production-ready |
 | **MongoDB** | `npm install mongodb` | Production-ready |
 | **Microsoft SQL Server** | `npm install mssql` | Production-ready |
+| **SQLite** | `npm install better-sqlite3` | Production-ready |
 | **Prisma** (any DB Prisma supports) | `npm install @prisma/client` | Production-ready |
 
 > **Note:** If your project already uses one of these drivers (check your `package.json`), you don't need to install anything extra.
@@ -190,8 +191,16 @@ DATABASE_URL=mongodb://username:password@hostname:27017/database_name
 # Microsoft SQL Server
 DATABASE_URL=mssql://username:password@hostname:1433/database_name
 
+# SQLite
+DATABASE_URL=sqlite:///absolute/path/to/database.sqlite
+# or just a file path:
+SQLITE_PATH=./dev.db
+
 # Prisma (uses whatever your Prisma schema defines)
 DATABASE_URL=postgresql://username:password@hostname:5432/database_name
+
+# SQLite (can also use plain file path in DATABASE_URL without a scheme)
+SQLITE_PATH=./data.db
 ```
 
 **Common hosted database examples:**
@@ -410,6 +419,8 @@ To add support for a new database:
 | `MSSQL_PASSWORD` | MSSQL | Password |
 | `MSSQL_ENCRYPT` | MSSQL | Set to `false` to disable encryption |
 | `MSSQL_TRUST_CERT` | MSSQL | Set to `true` to trust self-signed certificates |
+| **SQLite** | | |
+| `SQLITE_PATH` | SQLite | Path to the SQLite database file (e.g. `./dev.db`) |
 
 **How it works:** When you run `npx dlp set <ide>`, it scans your `.env` for all of the above variables, and writes every one it finds into the IDE's MCP config `env` block. That way, when the IDE spawns the DLP MCP server, all your database credentials are available — regardless of whether you use a single `DATABASE_URL` or separate variables.
 
