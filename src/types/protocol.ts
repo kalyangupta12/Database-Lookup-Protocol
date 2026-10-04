@@ -92,7 +92,7 @@ export interface DLPError {
 }
 
 // ── Config ───────────────────────────────────────────────────────────────────
-export type DBType = 'postgres' | 'mysql' | 'mongodb' | 'mssql' | 'prisma';
+export type DBType = 'postgres' | 'mysql' | 'mongodb' | 'mssql' | 'sqlite' | 'prisma';
 
 export interface DLPConfig {
   dbType: DBType;

@@ -52,11 +52,13 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/mssql": "^9.1.9",
     "@types/node": "^20.14.0",
     "@types/pg": "^8.11.6",
+    "better-sqlite3": "^11.7.0",
     "mongodb": "^7.1.0",
     "mssql": "^12.2.0",
     "mysql2": "^3.18.2",
@@ -65,6 +67,7 @@
   },
   "peerDependencies": {
     "@prisma/client": ">=5.0.0",
+    "better-sqlite3": ">=9.0.0",
     "mongodb": ">=6.0.0",
     "mssql": ">=10.0.0",
     "mysql2": ">=3.0.0",
@@ -81,6 +84,9 @@
       "optional": true
     },
     "mssql": {
+      "optional": true
+    },
+    "better-sqlite3": {
       "optional": true
     },
     "@prisma/client": {

@@ -43,7 +43,7 @@ loadEnv();
 function detectDBType(): DBType {
   if (process.env['DB_TYPE']) {
     const t = process.env['DB_TYPE'].toLowerCase() as DBType;
-    const valid: DBType[] = ['postgres', 'mysql', 'mongodb', 'mssql', 'prisma'];
+    const valid: DBType[] = ['postgres', 'mysql', 'mongodb', 'mssql', 'sqlite', 'prisma'];
     if (valid.includes(t)) return t;
     throw new Error(
       `Invalid DB_TYPE: "${process.env['DB_TYPE']}". Valid values: ${valid.join(', ')}`
@@ -55,15 +55,17 @@ function detectDBType(): DBType {
   if (url.startsWith('mysql://') || url.startsWith('mariadb://')) return 'mysql';
   if (url.startsWith('mongodb://') || url.startsWith('mongodb+srv://')) return 'mongodb';
   if (url.startsWith('mssql://') || url.startsWith('sqlserver://')) return 'mssql';
+  if (url.startsWith('sqlite://')) return 'sqlite';
 
   if (process.env['PG_HOST'] ?? process.env['PGHOST']) return 'postgres';
   if (process.env['MYSQL_HOST']) return 'mysql';
   if (process.env['MONGODB_URI']) return 'mongodb';
   if (process.env['MSSQL_HOST']) return 'mssql';
+  if (process.env['SQLITE_PATH']) return 'sqlite';
 
   throw new Error(
     'Cannot detect database type. Set DATABASE_URL, DB_TYPE, or a driver-specific env var ' +
-      '(PG_HOST, MYSQL_HOST, MONGODB_URI, MSSQL_HOST).'
+      '(PG_HOST, MYSQL_HOST, MONGODB_URI, MSSQL_HOST, SQLITE_PATH).'
   );
 }
 
@@ -116,23 +118,40 @@ async function createAdapter(dbType: DBType, config: DLPConfig): Promise<DLPAdap
       });
     }
 
-    case 'mongodb': {
-      const { MongoDBAdapter } = await import('../adapters/mongodb');
-      const uri =
-        process.env['MONGODB_URI'] ??
-        process.env['DATABASE_URL'] ??
-        'mongodb://localhost:27017';
-      const database =
-        process.env['MONGODB_DATABASE'] ??
-        (() => {
-          try {
-            return new URL(uri).pathname.slice(1) || 'test';
-          } catch {
-            return 'test';
+      case 'mongodb': {
+        const { MongoDBAdapter } = await import('../adapters/mongodb');
+        const uri =
+          process.env['MONGODB_URI'] ??
+          process.env['DATABASE_URL'] ??
+          'mongodb://localhost:27017';
+        const database =
+          process.env['MONGODB_DATABASE'] ??
+          (() => {
+            try {
+              return new URL(uri).pathname.slice(1) || 'test';
+            } catch {
+              return 'test';
+            }
+          })();
+        return new MongoDBAdapter({ uri, database, maxTextLength });
+      }
+
+      case 'sqlite': {
+        const { SQLiteAdapter } = await import('../adapters/sqlite');
+        const dbPath = process.env['SQLITE_PATH'] ?? (() => {
+          const url = process.env['DATABASE_URL'] ?? '';
+          if (url.startsWith('sqlite://')) {
+            return url.slice('sqlite://'.length);
           }
+          return url;
         })();
-      return new MongoDBAdapter({ uri, database, maxTextLength });
-    }
+        if (!dbPath) {
+          throw new Error(
+            'SQLite path not found. Set SQLITE_PATH or DATABASE_URL=sqlite:///path/to/db.sqlite'
+          );
+        }
+        return new SQLiteAdapter({ databasePath: dbPath, maxTextLength });
+      }
 
     case 'mssql': {
       const { MSSQLAdapter } = await import('../adapters/mssql');
@@ -260,6 +279,8 @@ async function main(): Promise<void> {
         // MSSQL
         'MSSQL_HOST', 'MSSQL_PORT', 'MSSQL_DATABASE', 'MSSQL_USER', 'MSSQL_PASSWORD',
         'MSSQL_ENCRYPT', 'MSSQL_TRUST_CERT',
+        // SQLite
+        'SQLITE_PATH',
       ];
 
       const dbEnvVars: Record<string, string> = {};
@@ -285,7 +306,8 @@ async function main(): Promise<void> {
         dbEnvVars['PG_HOST'] || dbEnvVars['PGHOST'] ||
         dbEnvVars['MYSQL_HOST'] ||
         dbEnvVars['MONGODB_URI'] ||
-        dbEnvVars['MSSQL_HOST'];
+        dbEnvVars['MSSQL_HOST'] ||
+        dbEnvVars['SQLITE_PATH'];
 
       if (!hasConnection) {
         console.error('[DLP] No database connection found in .env. Add one of:');

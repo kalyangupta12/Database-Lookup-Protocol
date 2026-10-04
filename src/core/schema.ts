@@ -24,6 +24,8 @@ const TYPE_MAP: Record<string, string> = {
   uniqueidentifier: 'uuid',
   // MongoDB
   objectid: 'objectid', bindata: 'binary', object: 'object', array: 'array',
+  // SQLite — `integer` is already mapped above for MySQL
+  real: 'float8',
 };
 
 export function normalizeType(rawType: string): string {
